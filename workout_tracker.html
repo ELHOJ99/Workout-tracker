@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Workout Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #eeecea;
+    --text: #1a1a1a;
+    --text2: #666660;
+    --text3: #999994;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --blue-bg: #E6F1FB;
+    --blue-text: #185FA5;
+    --green-bg: #E1F5EE;
+    --green-text: #0F6E56;
+    --green-mid: #1D9E75;
+    --amber-bg: #FAEEDA;
+    --amber-text: #854F0B;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --bg2: #242424;
+      --bg3: #2e2e2e;
+      --text: #f0f0f0;
+      --text2: #a0a09a;
+      --text3: #666660;
+      --border: rgba(255,255,255,0.12);
+      --border2: rgba(255,255,255,0.22);
+      --blue-bg: #0c2a45;
+      --blue-text: #85B7EB;
+      --green-bg: #0a2a1e;
+      --green-text: #5DCAA5;
+      --amber-bg: #2a1e08;
+      --amber-text: #EF9F27;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; max-width: 480px; margin: 0 auto; }
+  .screen { display: none; padding: 1rem 1rem 90px; min-height: calc(100vh - 60px); }
+  .screen.active { display: block; }
+  nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--bg); border-top: 0.5px solid var(--border); padding: 6px 4px env(safe-area-inset-bottom, 6px); z-index: 100; }
+  nav button { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 10px; padding: 6px 2px; display: flex; flex-direction: column; align-items: center; gap: 3px; border-radius: var(--radius); transition: all 0.15s; }
+  nav button i { font-size: 22px; }
+  nav button.active { color: var(--blue-text); background: var(--blue-bg); }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 12px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 1rem; }
+  .stat-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; }
+  .stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .stat-val { font-size: 20px; font-weight: 500; color: var(--text); }
+  .stat-unit { font-size: 12px; color: var(--text2); font-weight: 400; }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; margin-top: 1.25rem; }
+  .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+  .phase-1 { background: var(--green-bg); color: var(--green-text); }
+  .phase-2 { background: var(--blue-bg); color: var(--blue-text); }
+  .btn-primary { width: 100%; background: var(--blue-bg); color: var(--blue-text); border: none; border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+  .btn-success { background: var(--green-bg); color: var(--green-text); }
+  .back-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 22px; padding: 0 0 12px; display: flex; align-items: center; }
+  .ex-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .ex-row:last-child { border-bottom: none; }
+  .ex-icon { width: 32px; height: 32px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .ex-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .ex-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .set-badge { font-size: 11px; color: var(--blue-text); background: var(--blue-bg); padding: 3px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .tip-box { background: var(--bg2); border-left: 3px solid var(--green-mid); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: var(--text2); line-height: 1.55; }
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .tag { font-size: 13px; padding: 6px 14px; border-radius: 20px; border: 0.5px solid var(--border2); cursor: pointer; color: var(--text2); background: var(--bg); transition: all 0.15s; }
+  .tag.selected { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
+  .form-label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 4px; margin-top: 14px; }
+  input[type="date"], input[type="number"], input[type="text"] {
+    width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 10px 12px;
+    font-size: 15px; background: var(--bg); color: var(--text); -webkit-appearance: none;
+  }
+  input:focus { outline: none; border-color: var(--blue-text); box-shadow: 0 0 0 2px rgba(55,138,221,0.15); }
+  .wt-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+  .wt-row:last-child { border-bottom: none; }
+  .wt-name { font-size: 13px; color: var(--text); flex: 1; min-width: 0; line-height: 1.4; overflow: hidden; }
+  .wt-sets { font-size: 11px; color: var(--text2); margin-top: 3px; }
+  .wt-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .wt-input { width: 68px; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 10px; font-size: 15px; text-align: center; background: var(--bg); color: var(--text); }
+  .wt-unit { font-size: 12px; color: var(--text2); flex-shrink: 0; }
+  .week-row { display: flex; align-items: center; padding: 13px 0; border-bottom: 0.5px solid var(--border); cursor: pointer; gap: 12px; }
+  .week-num { width: 34px; height: 34px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+  .week-num.current { background: var(--blue-bg); color: var(--blue-text); }
+  .week-num.done { background: var(--green-bg); color: var(--green-text); }
+  .prog-wrap { background: var(--bg2); border-radius: 4px; height: 5px; margin-top: 5px; overflow: hidden; max-width: 130px; }
+  .prog-bar { height: 5px; border-radius: 4px; background: var(--green-mid); transition: width 0.3s; }
+  .hist-row { padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-header { display: flex; justify-content: space-between; align-items: center; }
+  .hist-weights { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .hist-wtag { font-size: 11px; background: var(--bg2); color: var(--text2); padding: 2px 9px; border-radius: 20px; }
+  h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  h2 { font-size: 17px; font-weight: 600; color: var(--text); }
+</style>
+</head>
+<body>
+
+<div id="home" class="screen active">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-top:0.5rem;">
+    <div>
+      <p style="font-size:12px;color:var(--text2);" id="today-date"></p>
+      <h1>Your program</h1>
+    </div>
+    <div style="text-align:right;">
+      <span class="badge phase-1" id="phase-badge">Phase 1</span>
+      <p style="font-size:11px;color:var(--text2);margin-top:3px;" id="week-label">Week 1 of 6</p>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Sessions done</div><div class="stat-val" id="stat-sessions">0 <span class="stat-unit">/ 18</span></div></div>
+    <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val" id="stat-weight">— <span class="stat-unit">lbs</span></div></div>
+  </div>
+  <div class="section-label">Next workout</div>
+  <div id="home-workout"></div>
+</div>
+
+<div id="program" class="screen">
+  <div style="padding-top:0.5rem;">
+    <h1 style="margin-bottom:4px;">6-week plan</h1>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Tap a week for full details</p>
+    <div class="tip-box">Phase 1 (weeks 1–3) builds movement quality. Phase 2 (weeks 4–6) adds progressive load. A 4th session when available = mobility or walking, not another lifting day.</div>
+    <div id="week-list"></div>
+  </div>
+</div>
+
+<div id="week-detail" class="screen">
+  <button class="back-btn" onclick="showScreen('program')"><i class="ti ti-arrow-left"></i></button>
+  <div id="week-detail-content"></div>
+</div>
+
+<div id="log" class="screen">
+  <div style="padding-top:0.5rem;">
+    <h1 style="margin-bottom:4px;">Log session</h1>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Record weights for each exercise</p>
+
+    <label class="form-label">Date</label>
+    <input type="date" id="log-date">
+
+    <label class="form-label">Session type</label>
+    <div class="tag-row" id="session-tags">
+      <div class="tag selected" data-val="A" onclick="selectTag(this,'session-tags');renderWeightFields()">Session A</div>
+      <div class="tag" data-val="B" onclick="selectTag(this,'session-tags');renderWeightFields()">Session B</div>
+    </div>
+
+    <label class="form-label">Energy / effort</label>
+    <div class="tag-row" id="effort-tags">
+      <div class="tag" data-val="1" onclick="selectTag(this,'effort-tags')">Low</div>
+      <div class="tag selected" data-val="2" onclick="selectTag(this,'effort-tags')">Moderate</div>
+      <div class="tag" data-val="3" onclick="selectTag(this,'effort-tags')">Strong</div>
+    </div>
+
+    <label class="form-label">Body weight (lbs) — optional</label>
+    <input type="number" id="log-bw" placeholder="e.g. 220" step="0.5">
+
+    <div class="section-label" style="margin-top:1.25rem;">Weights used</div>
+    <div class="card" style="padding:0.75rem 1rem;">
+      <div id="weight-fields"></div>
+    </div>
+
+    <label class="form-label">Notes</label>
+    <input type="text" id="log-notes" placeholder="e.g. increased goblet squat to 25lb">
+
+    <button class="btn-primary" id="save-btn" onclick="saveSession()"><i class="ti ti-check"></i>Save session</button>
+
+    <div class="section-label">Recent sessions</div>
+    <div id="log-history"></div>
+  </div>
+</div>
+
+<div id="progress" class="screen">
+  <div style="padding-top:0.5rem;">
+    <h1 style="margin-bottom:4px;">Progress</h1>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Track your 6-week journey</p>
+
+    <div class="section-label">Body weight trend</div>
+    <div class="card">
+      <canvas id="bw-chart" height="160"></canvas>
+      <p style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center;" id="bw-note">Log your body weight to see trend</p>
+    </div>
+
+    <div class="section-label">Exercise weight history</div>
+    <div id="ex-select" style="margin-bottom:12px;"></div>
+    <div class="card">
+      <canvas id="ex-chart" height="160"></canvas>
+      <p style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center;" id="ex-note">Tap an exercise above to see trend</p>
+    </div>
+
+    <div class="section-label">All sessions</div>
+    <div id="all-sessions"></div>
+  </div>
+</div>
+
+<nav>
+  <button class="active" id="nav-home" onclick="showScreen('home')"><i class="ti ti-home"></i>Home</button>
+  <button id="nav-program" onclick="showScreen('program')"><i class="ti ti-list"></i>Program</button>
+  <button id="nav-log" onclick="showScreen('log')"><i class="ti ti-plus"></i>Log</button>
+  <button id="nav-progress" onclick="showScreen('progress')"><i class="ti ti-chart-line"></i>Progress</button>
+</nav>
+
+<script>
+const PROGRAM = {
+  A: {
+    name: "Session A", focus: "Lower body + core",
+    warmup: "5 min: leg swings x10 each, hip circles, cat-cow x10, bird-dog x8",
+    exercises: [
+      { id:"goblet_squat", name:"Goblet squat", sets:"3×10", tip:"Heels shoulder-width, weight at chest, sit back and down. Start 15–20 lb.", icon:"ti-barbell", bg:"var(--blue-bg)", fg:"var(--blue-text)", hasWeight:true },
+      { id:"rdl", name:"Romanian deadlift", sets:"3×10", tip:"Hinge at hips, soft knee, weights close to legs. Start light — 15–20 lb.", icon:"ti-arrow-down", bg:"var(--blue-bg)", fg:"var(--blue-text)", hasWeight:true },
+      { id:"glute_bridge", name:"Glute bridge", sets:"3×12", tip:"Drive through heels, squeeze at top for 2 sec. Bodyweight to start.", icon:"ti-trending-up", bg:"var(--green-bg)", fg:"var(--green-text)", hasWeight:false },
+      { id:"pallof_press", name:"Pallof press", sets:"3×10 each side", tip:"Anti-rotation core work. Cable or band at chest height. Key for golfers.", icon:"ti-arrows-horizontal", bg:"var(--green-bg)", fg:"var(--green-text)", hasWeight:true },
+      { id:"hip_flexor", name:"Hip flexor stretch", sets:"2×45 sec each", tip:"Kneeling lunge. Lean forward gently. Tight in most golfers and desk workers.", icon:"ti-yoga", bg:"var(--amber-bg)", fg:"var(--amber-text)", hasWeight:false },
+      { id:"thoracic_rot", name:"Thoracic rotation", sets:"2×10 each side", tip:"Seated or on ground. Critical for golf rotation and shoulder health.", icon:"ti-refresh", bg:"var(--amber-bg)", fg:"var(--amber-text)", hasWeight:false }
+    ]
+  },
+  B: {
+    name: "Session B", focus: "Upper body + posterior chain",
+    warmup: "5 min: arm circles, band pull-aparts x15, thoracic extension on foam roller",
+    exercises: [
+      { id:"db_row", name:"Dumbbell row", sets:"3×10 each", tip:"One hand on bench, pull elbow to hip. Start 20–25 lb.", icon:"ti-arrow-up", bg:"var(--blue-bg)", fg:"var(--blue-text)", hasWeight:true },
+      { id:"chest_press", name:"Chest press", sets:"3×10", tip:"Flat bench or floor press. Control the descent. Start 25–30 lb.", icon:"ti-barbell", bg:"var(--blue-bg)", fg:"var(--blue-text)", hasWeight:true },
+      { id:"oh_press", name:"Overhead press", sets:"3×8", tip:"Seated preferred. Don't arch your lower back. Start 15–20 lb.", icon:"ti-arrow-up-right", bg:"var(--blue-bg)", fg:"var(--blue-text)", hasWeight:true },
+      { id:"face_pull", name:"Face pull / band pull-apart", sets:"3×15", tip:"Rear delts and external rotation. Critical for shoulder balance.", icon:"ti-arrows-horizontal", bg:"var(--green-bg)", fg:"var(--green-text)", hasWeight:false },
+      { id:"dead_bug", name:"Dead bug", sets:"3×8 each side", tip:"Lower back pressed into floor. Slow and controlled. Opposite arm/leg extend.", icon:"ti-bug", bg:"var(--green-bg)", fg:"var(--green-text)", hasWeight:false },
+      { id:"pec_stretch", name:"Pec / doorway stretch", sets:"2×30 sec each side", tip:"Elbow at 90°, lean into doorway. Counteracts the hunching from pressing.", icon:"ti-stretch", bg:"var(--amber-bg)", fg:"var(--amber-text)", hasWeight:false }
+    ]
+  }
+};
+
+const WEEKS = [
+  { week:1, phase:1, focus:"Movement reactivation", sessions:["A","B","A"], note:"Everything should feel manageable. You're retraining movement patterns, not testing max effort." },
+  { week:2, phase:1, focus:"Building the pattern", sessions:["B","A","B"], note:"Add one rep or a touch more weight where form feels solid. Don't push it yet." },
+  { week:3, phase:1, focus:"Consolidating form", sessions:["A","B","A"], note:"All movements should feel natural by end of this week. You're ready to load." },
+  { week:4, phase:2, focus:"Progressive load — week 1", sessions:["B","A","B"], note:"Increase goblet squat and row by ~5 lbs. Keep RDL conservative." },
+  { week:5, phase:2, focus:"Progressive load — week 2", sessions:["A","B","A"], note:"Add reps before adding weight. If 10 felt easy, do 12 before going heavier." },
+  { week:6, phase:2, focus:"Consolidation & assessment", sessions:["B","A","B"], note:"Final week. Assess progress. Plan your next 6 weeks from here." }
+];
+
+let sessions = [];
+let bwChart = null, exChart = null, selectedEx = null;
+
+try { sessions = JSON.parse(localStorage.getItem('workout_tracker_v2') || '[]'); } catch(e) {}
+function persist() { try { localStorage.setItem('workout_tracker_v2', JSON.stringify(sessions)); } catch(e) {} }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const map = { home:'nav-home', program:'nav-program', log:'nav-log', progress:'nav-progress', 'week-detail':'nav-program' };
+  if (map[id]) document.getElementById(map[id]).classList.add('active');
+  if (id === 'home') renderHome();
+  if (id === 'program') renderWeekList();
+  if (id === 'log') { renderWeightFields(); renderLogHistory(); }
+  if (id === 'progress') renderProgress();
+  window.scrollTo(0, 0);
+}
+
+function selectTag(el, gid) {
+  document.querySelectorAll('#'+gid+' .tag').forEach(t => t.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function getTag(gid) { const s = document.querySelector('#'+gid+' .tag.selected'); return s ? s.dataset.val : null; }
+
+function getLastWeight(exId) {
+  for (let i = sessions.length - 1; i >= 0; i--) {
+    const w = sessions[i].weights && sessions[i].weights[exId];
+    if (w) return w;
+  }
+  return null;
+}
+
+function renderWeightFields() {
+  const type = getTag('session-tags') || 'A';
+  const sess = PROGRAM[type];
+  const weighted = sess.exercises.filter(e => e.hasWeight);
+  document.getElementById('weight-fields').innerHTML = weighted.map(e => {
+    const last = getLastWeight(e.id);
+    return `<div class="wt-row">
+      <div class="ex-icon" style="background:${e.bg};width:30px;height:30px;border-radius:6px;flex-shrink:0;">
+        <i class="ti ${e.icon}" style="color:${e.fg};font-size:14px;"></i>
+      </div>
+      <div class="wt-name">${e.name}<div class="wt-sets">${e.sets}${last?' · last: '+last+' lb':''}</div></div>
+      <div class="wt-right">
+        <input type="number" class="wt-input" id="w_${e.id}" placeholder="${last||'—'}" step="2.5" min="0">
+        <span class="wt-unit">lbs</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveSession() {
+  const type = getTag('session-tags') || 'A';
+  const sess = PROGRAM[type];
+  const date = document.getElementById('log-date').value || new Date().toISOString().split('T')[0];
+  const effort = getTag('effort-tags');
+  const bwVal = document.getElementById('log-bw').value;
+  const notes = document.getElementById('log-notes').value;
+  const weights = {};
+  sess.exercises.filter(e => e.hasWeight).forEach(e => {
+    const el = document.getElementById('w_'+e.id);
+    if (el && el.value) weights[e.id] = parseFloat(el.value);
+  });
+  sessions.push({ date, type, effort, bw: bwVal ? parseFloat(bwVal) : null, notes, weights });
+  persist();
+  document.getElementById('log-bw').value = '';
+  document.getElementById('log-notes').value = '';
+  sess.exercises.filter(e => e.hasWeight).forEach(e => {
+    const el = document.getElementById('w_'+e.id);
+    if (el) el.value = '';
+  });
+  const btn = document.getElementById('save-btn');
+  btn.innerHTML = '<i class="ti ti-check"></i>Saved!';
+  btn.classList.add('btn-success');
+  setTimeout(() => { btn.innerHTML = '<i class="ti ti-check"></i>Save session'; btn.classList.remove('btn-success'); }, 2000);
+  renderWeightFields();
+  renderLogHistory();
+  renderHome();
+}
+
+function renderLogHistory() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('log-date').value = today;
+  const recent = [...sessions].reverse().slice(0,5);
+  document.getElementById('log-history').innerHTML = recent.length === 0
+    ? '<p style="font-size:13px;color:var(--text2);padding:12px 0;">No sessions logged yet</p>'
+    : recent.map(s => {
+        const sess = PROGRAM[s.type] || PROGRAM['A'];
+        const wtags = sess.exercises.filter(e => e.hasWeight && s.weights && s.weights[e.id])
+          .map(e => `<span class="hist-wtag">${e.name.split(' ')[0]}: ${s.weights[e.id]}lb</span>`).join('');
+        return `<div class="hist-row">
+          <div class="hist-header">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">Session ${s.type}</span>
+            <span style="font-size:11px;color:var(--text2);">${s.date}${s.bw?' · '+s.bw+'lb':''}</span>
+          </div>
+          ${wtags?`<div class="hist-weights">${wtags}</div>`:''}
+          ${s.notes?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">${s.notes}</div>`:''}
+        </div>`;
+      }).join('');
+}
+
+function renderHome() {
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const done = sessions.length;
+  document.getElementById('stat-sessions').innerHTML = `${done} <span class="stat-unit">/ 18</span>`;
+  const withBw = sessions.filter(s => s.bw);
+  if (withBw.length > 0) {
+    const latest = withBw[withBw.length-1];
+    document.getElementById('stat-weight').innerHTML = `${latest.bw} <span class="stat-unit">lbs</span>`;
+  }
+  const wi = Math.min(Math.floor(done/3), 5);
+  const week = WEEKS[wi];
+  document.getElementById('phase-badge').textContent = 'Phase '+week.phase;
+  document.getElementById('phase-badge').className = 'badge '+(week.phase===1?'phase-1':'phase-2');
+  document.getElementById('week-label').textContent = 'Week '+week.week+' of 6';
+  const si = done % 3;
+  const nextType = week.sessions[si];
+  const nextSess = PROGRAM[nextType];
+  const exHtml = nextSess.exercises.map(e => {
+    const last = e.hasWeight ? getLastWeight(e.id) : null;
+    return `<div class="ex-row">
+      <div class="ex-icon" style="background:${e.bg};"><i class="ti ${e.icon}" style="color:${e.fg};font-size:15px;"></i></div>
+      <div style="flex:1;min-width:0;"><div class="ex-name">${e.name}</div>${last?`<div class="ex-sub">Last logged: ${last} lbs</div>`:''}</div>
+      <span class="set-badge">${e.sets}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('home-workout').innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2>${nextSess.name}</h2>
+      <span class="badge ${week.phase===1?'phase-1':'phase-2'}" style="font-size:10px;">Week ${week.week}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">${nextSess.focus}</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.4;">Warmup: ${nextSess.warmup}</div>
+    ${exHtml}
+    <button class="btn-primary" onclick="showScreen('log')" style="margin-top:12px;"><i class="ti ti-plus"></i>Log this session</button>
+  </div>`;
+}
+
+function renderWeekList() {
+  const done = sessions.length;
+  const cur = Math.min(Math.floor(done/3), 5);
+  document.getElementById('week-list').innerHTML = WEEKS.map((w,i) => {
+    const inWeek = Math.max(0, Math.min(3, done - i*3));
+    const isDone = i < cur, isCur = i === cur;
+    return `<div class="week-row" onclick="showWeekDetail(${i})">
+      <div class="week-num ${isDone?'done':isCur?'current':''}">
+        ${isDone?'<i class="ti ti-check" style="font-size:14px;"></i>':w.week}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">Week ${w.week}: ${w.focus}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px;">
+          <span class="badge ${w.phase===1?'phase-1':'phase-2'}" style="font-size:10px;">Phase ${w.phase}</span>
+          &nbsp;${w.sessions.join(' · ')}
+        </div>
+        <div class="prog-wrap"><div class="prog-bar" style="width:${Math.round((inWeek/3)*100)}%;"></div></div>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--text2);"></i>
+    </div>`;
+  }).join('');
+}
+
+function showWeekDetail(wi) {
+  const week = WEEKS[wi];
+  let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <h1>Week ${week.week}</h1>
+    <span class="badge ${week.phase===1?'phase-1':'phase-2'}">Phase ${week.phase}</span>
+  </div>
+  <div class="tip-box">${week.note}</div>`;
+  week.sessions.forEach((code,idx) => {
+    const s = PROGRAM[code];
+    html += `<div style="margin-bottom:1.5rem;">
+      <div class="section-label">Day ${idx+1} — ${s.name}</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.4;">Warmup: ${s.warmup}</div>
+      <div class="card" style="padding:0.75rem 1rem;">
+        ${s.exercises.map(e => `<div class="ex-row">
+          <div class="ex-icon" style="background:${e.bg};"><i class="ti ${e.icon}" style="color:${e.fg};font-size:15px;"></i></div>
+          <div style="flex:1;min-width:0;">
+            <div class="ex-name">${e.name}</div>
+            <div class="ex-sub">${e.tip}</div>
+          </div>
+          <span class="set-badge">${e.sets}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  document.getElementById('week-detail-content').innerHTML = html;
+  showScreen('week-detail');
+}
+
+function renderProgress() {
+  const sorted = [...sessions].sort((a,b) => a.date.localeCompare(b.date));
+  if (bwChart) { bwChart.destroy(); bwChart = null; }
+  const withBw = sorted.filter(s => s.bw);
+  const bwCtx = document.getElementById('bw-chart').getContext('2d');
+  if (withBw.length >= 2) {
+    document.getElementById('bw-note').style.display = 'none';
+    bwChart = new Chart(bwCtx, {
+      type:'line', data:{ labels:withBw.map(s=>s.date.slice(5)),
+        datasets:[{ data:withBw.map(s=>s.bw), borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,0.1)', tension:0.3, fill:true, pointBackgroundColor:'#1D9E75', pointRadius:4 }] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{font:{size:10}}}, x:{grid:{display:false},ticks:{font:{size:10}}} } }
+    });
+  } else { document.getElementById('bw-note').style.display='block'; }
+
+  const allEx = [];
+  Object.values(PROGRAM).forEach(s => s.exercises.filter(e => e.hasWeight).forEach(e => {
+    if (!allEx.find(x => x.id===e.id)) allEx.push(e);
+  }));
+  document.getElementById('ex-select').innerHTML = `<div class="tag-row">${allEx.map(e =>
+    `<div class="tag${selectedEx===e.id?' selected':''}" onclick="selectExHistory('${e.id}')">${e.name.split(' ').slice(0,2).join(' ')}</div>`
+  ).join('')}</div>`;
+  renderExChart(sorted);
+
+  document.getElementById('all-sessions').innerHTML = [...sessions].reverse().length === 0
+    ? '<p style="font-size:13px;color:var(--text2);padding:12px 0;">No sessions yet</p>'
+    : [...sessions].reverse().map(s => {
+        const sess = PROGRAM[s.type] || PROGRAM['A'];
+        const wtags = sess.exercises.filter(e => e.hasWeight && s.weights && s.weights[e.id])
+          .map(e => `<span class="hist-wtag">${e.name.split(' ')[0]}: ${s.weights[e.id]}lb</span>`).join('');
+        return `<div class="hist-row">
+          <div class="hist-header">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">Session ${s.type}</span>
+            <span style="font-size:11px;color:var(--text2);">${s.date}${s.bw?' · '+s.bw+'lb':''}</span>
+          </div>
+          ${wtags?`<div class="hist-weights">${wtags}</div>`:''}
+          ${s.notes?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">${s.notes}</div>`:''}
+        </div>`;
+      }).join('');
+}
+
+function selectExHistory(id) {
+  selectedEx = id;
+  const sorted = [...sessions].sort((a,b) => a.date.localeCompare(b.date));
+  document.querySelectorAll('#ex-select .tag').forEach(t => { t.classList.toggle('selected', t.textContent.trim() === (PROGRAM.A.exercises.find(e=>e.id===id)||PROGRAM.B.exercises.find(e=>e.id===id)||{name:''}).name.split(' ').slice(0,2).join(' ')); });
+  renderExChart(sorted);
+}
+
+function renderExChart(sorted) {
+  if (exChart) { exChart.destroy(); exChart = null; }
+  const ctx = document.getElementById('ex-chart').getContext('2d');
+  if (!selectedEx) { document.getElementById('ex-note').style.display='block'; return; }
+  const pts = (sorted||[...sessions].sort((a,b)=>a.date.localeCompare(b.date))).filter(s => s.weights && s.weights[selectedEx]);
+  if (pts.length < 2) { document.getElementById('ex-note').textContent='Need 2+ sessions to show trend'; document.getElementById('ex-note').style.display='block'; return; }
+  document.getElementById('ex-note').style.display='none';
+  exChart = new Chart(ctx, {
+    type:'line', data:{ labels:pts.map(s=>s.date.slice(5)),
+      datasets:[{ data:pts.map(s=>s.weights[selectedEx]), borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,0.1)', tension:0.3, fill:true, pointBackgroundColor:'#378ADD', pointRadius:4 }] },
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{font:{size:10},callback:v=>v+'lb'}}, x:{grid:{display:false},ticks:{font:{size:10}}} } }
+  });
+}
+
+renderHome();
+renderWeightFields();
+</script>
+</body>
+</html>
